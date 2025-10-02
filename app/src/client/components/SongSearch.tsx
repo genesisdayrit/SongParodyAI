@@ -120,27 +120,27 @@ export default function SongSearch() {
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: "2rem auto", fontFamily: "sans-serif" }}>
+    <div className="max-w-3xl mx-auto my-8 font-sans">
       <h1>Song Search</h1>
 
       <form onSubmit={handleSearch}>
-        <div style={{ marginBottom: "0.5rem" }}>
+        <div className="mb-2">
           <label>Song: </label>
           <input
             value={song}
             onChange={(e) => setSong(e.target.value)}
             placeholder="Enter a Song Title"
-            style={{ width: "100%" }}
+            className="w-full"
           />
         </div>
 
-        <div style={{ marginBottom: "0.5rem" }}>
+        <div className="mb-2">
           <label>Artist (optional): </label>
           <input
             value={artist}
             onChange={(e) => setArtist(e.target.value)}
             placeholder="Enter an artist"
-            style={{ width: "100%" }}
+            className="w-full"
           />
         </div>
 
@@ -150,23 +150,15 @@ export default function SongSearch() {
       </form>
 
       {/* display lyrics */}
-      {lyricsError && <p style={{ color: "red" }}>{lyricsError}</p>}
+      {lyricsError && <p className="text-red-600">{lyricsError}</p>}
       {lyrics && (
-        <div style={{ marginTop: "1rem" }}>
+        <div className="mt-4">
           <h2>{lyrics.title}</h2>
           <a href={lyrics.url} target="_blank" rel="noreferrer">
             View on Genius
           </a>
           <pre
-            style={{
-              whiteSpace: "pre-wrap",
-              marginTop: "1rem",
-              maxHeight: 300,
-              overflowY: "auto",
-              padding: "0.5rem",
-              border: "1px solid #ddd",
-              borderRadius: 6,
-            }}
+            className="whitespace-pre-wrap mt-4 max-h-[300px] overflow-y-auto p-2 border border-gray-300 rounded-md"
           >
             {lyrics.lyrics}
           </pre>
@@ -174,9 +166,9 @@ export default function SongSearch() {
       )}
 
       {/* youtube result (display the top result only) */}
-    <div style={{ marginTop: "2rem" }}>
+    <div className="mt-8">
     <h2>Instrumental</h2>
-    {ytError && <p style={{ color: "red" }}>{ytError}</p>}
+    {ytError && <p className="text-red-600">{ytError}</p>}
     {ytLoading && ytItems.length === 0 && <p>Loading video…</p>}
 
     {ytItems.length === 0 && !ytLoading && !ytError && (
@@ -194,31 +186,26 @@ export default function SongSearch() {
 
         return (
         <div
-            style={{
-            border: "1px solid #eee",
-            borderRadius: 8,
-            padding: 8,
-            maxWidth: 500,
-            }}
+            className="border border-gray-200 rounded-lg p-2 max-w-lg"
         >
             {thumb && watchUrl && (
             <a href={watchUrl} target="_blank" rel="noreferrer">
                 <img
                 src={thumb}
                 alt={item.snippet.title}
-                style={{ width: "100%", borderRadius: 6 }}
+                className="w-full rounded-md"
                 />
             </a>
             )}
-            <div style={{ marginTop: 8 }}>
+            <div className="mt-2">
             {watchUrl ? (
-                <a href={watchUrl} target="_blank" rel="noreferrer" style={{ fontWeight: 600 }}>
+                <a href={watchUrl} target="_blank" rel="noreferrer" className="font-semibold">
                 {item.snippet.title}
                 </a>
             ) : (
-                <div style={{ fontWeight: 600 }}>{item.snippet.title}</div>
+                <div className="font-semibold">{item.snippet.title}</div>
             )}
-            <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
+            <div className="text-xs opacity-80 mt-1">
                 {item.snippet.channelTitle} •{" "}
                 {new Date(item.snippet.publishedAt).toLocaleDateString()}
                 {item.snippet.liveBroadcastContent !== "none" && (

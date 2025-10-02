@@ -40,7 +40,6 @@ export default function SongSearch() {
   const [song, setSong] = useState("");
   const [artist, setArtist] = useState("");
 
-  const [lyrics, setLyrics] = useState<LyricsResponse | null>(null);
   const [lyricsError, setLyricsError] = useState<string | null>(null);
 
   const [ytItems, setYtItems] = useState<YTItem[]>([]);
@@ -48,10 +47,12 @@ export default function SongSearch() {
   const [ytNextPage, setYtNextPage] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [ytLoading, setYtLoading] = useState(false);
+  const [parodyTopic, setParodyTopic ] = useState<string | undefined>('')
+  const [lyricsData, setLyricsData] = useState<LyricsResponse | null>(null);
 
   async function fetchLyrics(qSong: string, qArtist: string) {
     setLyricsError(null);
-    setLyrics(null);
+    setLyricsData(null);
 
     const params = new URLSearchParams({
       song: qSong,
@@ -64,7 +65,7 @@ export default function SongSearch() {
       throw new Error(problem?.error || `Lyrics request failed (${res.status})`);
     }
     const json: LyricsResponse = await res.json();
-    setLyrics(json);
+    setLyricsData(json);
   }
 
   async function fetchYouTube(qSong: string, qArtist: string) {
@@ -119,6 +120,59 @@ export default function SongSearch() {
     }
   }
 
+
+//   const sendMove = async (gameId: String, cellIndex: Number) => {
+//     console.log('cell clicked')
+//     console.log(`Game ${gameId} Updated`)
+//     let response = await fetch(`/api/game/${id}/move`, {
+//       method: "POST",
+//       headers: {"Content-Type": "application/json"},
+//       body: JSON.stringify({cellPosition: cellIndex, id: gameId, gameState: gameState})
+//     })
+  
+//     let result = await response.json()
+  
+//     if (result.ok) {
+//       console.log("Data sent sucessfully!", gameState)
+//       fetchGameState()
+//       fetchGameMoves()
+//       }
+//     }
+
+  // async function that passes the returned lyrics from genius into the AI
+  // post request to the api from the api
+   
+  const generateParodyLyrics = async () => {
+    // guard rails
+    if (!lyricsData?.lyrics) {
+      console.log("No lyrics available yet.");
+      return;
+    }
+    if (!parodyTopic) {
+      console.log("No parody topic provided.");
+      return;
+    }
+  
+    console.log('clicked');
+    // this logs the raw lyrics text, not the object
+    console.log(song, artist, lyricsData.lyrics, parodyTopic);
+  
+    const response = await fetch('/api/ai-parody-generation', {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        // prefer the official title from Genius if you want
+        songTitle: lyricsData.title || song,
+        artist,
+        lyrics: lyricsData.lyrics,
+        parodyTopic
+      })
+    });
+  
+    const result = await response.json();
+    console.log(result);
+  };
+
   return (
     <div className="max-w-3xl mx-auto my-8 font-sans">
       <h1>Song Search</h1>
@@ -151,21 +205,17 @@ export default function SongSearch() {
 
       {/* display lyrics */}
       {lyricsError && <p className="text-red-600">{lyricsError}</p>}
-      {lyrics && (
+      {lyricsData && (
         <div className="mt-4">
-          <h2>{lyrics.title}</h2>
-          <a href={lyrics.url} target="_blank" rel="noreferrer">
-            View on Genius
-          </a>
-          <pre
-            className="whitespace-pre-wrap mt-4 max-h-[300px] overflow-y-auto p-2 border border-gray-300 rounded-md"
-          >
-            {lyrics.lyrics}
-          </pre>
+            <h2>{lyricsData.title}</h2>
+            <a href={lyricsData.url} target="_blank" rel="noreferrer">View on Genius</a>
+            <pre className="whitespace-pre-wrap mt-4 max-h-[300px] overflow-y-auto p-2 border border-gray-300 rounded-md">
+            {lyricsData.lyrics}
+            </pre>
         </div>
-      )}
+        )}
 
-      {/* youtube result (display the top result only) */}
+    {/* youtube result (display the top result only) */}
     <div className="mt-8">
     <h2>Instrumental</h2>
     {ytError && <p className="text-red-600">{ytError}</p>}
@@ -186,7 +236,7 @@ export default function SongSearch() {
 
         return (
         <div
-            className="border border-gray-200 rounded-lg p-2 max-w-lg"
+            className="flex flex-col border border-gray-200 rounded-lg text-center item-center p-2 max-w-lg"
         >
             {thumb && watchUrl && (
             <a href={watchUrl} target="_blank" rel="noreferrer">
@@ -218,8 +268,10 @@ export default function SongSearch() {
             <input 
                 className="flex border"
                 placeholder="Enter a parody topic"
+                value = {parodyTopic}
+                onChange={(e) => setParodyTopic(e.target.value)}
             ></input>
-            <button className="border">Generate Song Lyrics</button>
+            <button onClick={generateParodyLyrics} className="border">Generate Song Lyrics</button>
         </div>
         </div>
         );

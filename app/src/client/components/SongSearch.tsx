@@ -213,11 +213,18 @@ export default function SongSearch() {
                 )}
             </div>
             </div>
+        <div className="flex flex-col mt-8 gap-4"> 
+            <label>Parody Topic</label>
+            <input 
+                className="flex border"
+                placeholder="Enter a parody topic"
+            ></input>
+            <button className="border">Generate Song Lyrics</button>
+        </div>
         </div>
         );
     })()}
     </div>
-
     </div>
   );
 }

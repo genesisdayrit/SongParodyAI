@@ -101,7 +101,6 @@ export default function SongSearch() {
     }
   }
   
-
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const qSong = song.trim();
@@ -119,25 +118,6 @@ export default function SongSearch() {
       setLoading(false);
     }
   }
-
-
-//   const sendMove = async (gameId: String, cellIndex: Number) => {
-//     console.log('cell clicked')
-//     console.log(`Game ${gameId} Updated`)
-//     let response = await fetch(`/api/game/${id}/move`, {
-//       method: "POST",
-//       headers: {"Content-Type": "application/json"},
-//       body: JSON.stringify({cellPosition: cellIndex, id: gameId, gameState: gameState})
-//     })
-  
-//     let result = await response.json()
-  
-//     if (result.ok) {
-//       console.log("Data sent sucessfully!", gameState)
-//       fetchGameState()
-//       fetchGameMoves()
-//       }
-//     }
 
   // async function that passes the returned lyrics from genius into the AI
   // post request to the api from the api

@@ -3,8 +3,14 @@ import ViteExpress from "vite-express";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import 'dotenv/config';
+import OpenAI from 'openai';
 
 const app = express();
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
 
 const GENIUS_API_TOKEN = process.env.GENIUS_CLIENT_ACCESS_TOKEN
 
@@ -104,6 +110,44 @@ app.get("/yt-search", async (req, res) => {
     return res.status(500).json({ error: "Unexpected server error" });
   }
 });
+
+
+app.post('/api/ai-parody-generation', async (req, res) => {
+  const { songTitle, artist, lyrics, parodyTopic } = req.body; 
+
+  console.log(req.body)
+  const systemPrompt = `
+  You are a hilarious parody song writer. I want to make a parody of the song: ${songTitle} by ${artist}
+  
+  The lyrics for the song are within this text: "${lyrics}"
+
+  I want to create a parody for the topic on ${parodyTopic}
+
+  Please rewrite the lyrics based on the parody topic, 
+  try your best to match the syllable cadence and rhytmic structure for the lyrics. 
+  `
+
+  if (!lyrics || !parodyTopic) {
+      return res.status(400).json({error: 'Lyrics or Parody Topic not available'})
+  } 
+  try {
+      console.log(`Attempting AI Response for ${systemPrompt}`)
+      const completion = await openai.chat.completions.create({
+          model: 'gpt-4o',
+          messages: [{ role: 'user', content: systemPrompt }],
+          max_tokens: 1000
+      })
+
+      console.log(completion)
+
+      const generatedParodyResponse = completion.choices[0].message.content;
+
+      res.status(200).json({ok: true, generatedParody: generatedParodyResponse})
+
+  } catch (error) {
+      res.status(500).json({ error: 'Failed to get OpenAI response'})
+  }
+})
 
 // --- Start Vite + Express ---
 ViteExpress.listen(app, 3000, () =>

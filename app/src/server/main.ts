@@ -105,9 +105,7 @@ app.get("/yt-search", async (req, res) => {
   }
 });
 
-
-
-// --- start vite + express ---
+// --- Start Vite + Express ---
 ViteExpress.listen(app, 3000, () =>
   console.log("Server is listening on port 3000...")
 );

@@ -8,6 +8,9 @@ const app = express();
 
 const GENIUS_API_TOKEN = process.env.GENIUS_CLIENT_ACCESS_TOKEN
 
+const YT_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+
 app.get("/hello", (_, res) => {
   res.send("Hello Vite + React + TypeScript!");
 });
@@ -55,7 +58,56 @@ app.get("/genius-lyrics", async (req, res) => {
   }
 });
 
-// --- Start Vite + Express ---
+app.get("/yt-search", async (req, res) => {
+  try {
+    let {
+      q = "",
+      type = "video",
+      // ignore any client maxresults; force 1
+      // maxresults = "1",
+      pageToken = "",
+      channelId = "",
+      order = "relevance",
+      safeSearch = "moderate"
+    } = req.query;
+
+    if (!q) return res.status(400).json({ error: "Missing required query param: q" });
+    if (!YOUTUBE_API_KEY) return res.status(500).json({ error: "Server missing YOUTUBE_API_KEY" });
+
+    // force instrumental bias + single result
+    const params = new URLSearchParams({
+      key: YOUTUBE_API_KEY,
+      part: "snippet",
+      q: `${String(q)} instrumental`,  // append instrumental to the search text
+      type: String(type),
+      maxResults: "1",
+      order: String(order),
+      safeSearch: String(safeSearch),
+    });
+    if (pageToken) params.set("pageToken", String(pageToken));
+    if (channelId) params.set("channelId", String(channelId));
+
+    const resp = await fetch(`${YT_SEARCH_URL}?${params.toString()}`);
+    if (!resp.ok) {
+      const text = await resp.text();
+      return res.status(resp.status).json({ error: "YouTube API error", detail: text });
+    }
+    const data = await resp.json();
+    // normalize to top 1 (just in case)
+    data.items = Array.isArray(data.items) ? data.items.slice(0, 1) : [];
+    delete data.nextPageToken;
+    delete data.prevPageToken;
+
+    return res.json(data);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Unexpected server error" });
+  }
+});
+
+
+
+// --- start vite + express ---
 ViteExpress.listen(app, 3000, () =>
   console.log("Server is listening on port 3000...")
 );

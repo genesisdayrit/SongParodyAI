@@ -40,7 +40,6 @@ export default function SongSearch() {
   const [song, setSong] = useState("");
   const [artist, setArtist] = useState("");
 
-  const [lyrics, setLyrics] = useState<LyricsResponse | null>(null);
   const [lyricsError, setLyricsError] = useState<string | null>(null);
 
   const [ytItems, setYtItems] = useState<YTItem[]>([]);
@@ -48,10 +47,13 @@ export default function SongSearch() {
   const [ytNextPage, setYtNextPage] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
   const [ytLoading, setYtLoading] = useState(false);
+  const [parodyTopic, setParodyTopic ] = useState<string | undefined>('')
+  const [lyricsData, setLyricsData] = useState<LyricsResponse | null>(null)
+  const [generatedParody, setGeneratedParody] = useState<string | undefined>('')
 
   async function fetchLyrics(qSong: string, qArtist: string) {
     setLyricsError(null);
-    setLyrics(null);
+    setLyricsData(null);
 
     const params = new URLSearchParams({
       song: qSong,
@@ -64,7 +66,7 @@ export default function SongSearch() {
       throw new Error(problem?.error || `Lyrics request failed (${res.status})`);
     }
     const json: LyricsResponse = await res.json();
-    setLyrics(json);
+    setLyricsData(json);
   }
 
   async function fetchYouTube(qSong: string, qArtist: string) {
@@ -118,6 +120,47 @@ export default function SongSearch() {
       setLoading(false);
     }
   }
+   
+  const generateParodyLyrics = async () => {
+    // guard rails
+    if (!lyricsData?.lyrics) {
+      console.log("No lyrics available yet.");
+      return;
+    }
+    if (!parodyTopic) {
+      console.log("No parody topic provided.");
+      return;
+    }
+  
+    console.log('Generating parody lyrics...')
+    console.log('Data:', { song, artist, lyricsLength: lyricsData.lyrics.length, parodyTopic })
+  
+    try {
+      const response = await fetch('/api/ai-parody-generation', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // prefer the official title from Genius
+          songTitle: lyricsData.title || song,
+          artist: artist,
+          lyrics: lyricsData.lyrics,
+          parodyTopic: parodyTopic
+        })
+      })
+  
+      const result = await response.json()
+      console.log('Response from server:', result)
+      
+      if (result.ok) {
+          console.log('Parody generated successfully, length:', result.generatedParody?.length);
+          setGeneratedParody(result.generatedParody)
+      } else {
+          console.error('Server returned error:', result.error)
+      }
+    } catch (error) {
+      console.error('Fetch error:', error)
+    }
+  };
 
   return (
     <div className="max-w-3xl mx-auto my-8 font-sans">
@@ -151,21 +194,17 @@ export default function SongSearch() {
 
       {/* display lyrics */}
       {lyricsError && <p className="text-red-600">{lyricsError}</p>}
-      {lyrics && (
+      {lyricsData && (
         <div className="mt-4">
-          <h2>{lyrics.title}</h2>
-          <a href={lyrics.url} target="_blank" rel="noreferrer">
-            View on Genius
-          </a>
-          <pre
-            className="whitespace-pre-wrap mt-4 max-h-[300px] overflow-y-auto p-2 border border-gray-300 rounded-md"
-          >
-            {lyrics.lyrics}
-          </pre>
+            <h2>{lyricsData.title}</h2>
+            <a href={lyricsData.url} target="_blank" rel="noreferrer">View on Genius</a>
+            <pre className="whitespace-pre-wrap mt-4 max-h-[300px] overflow-y-auto p-2 border border-gray-300 rounded-md">
+            {lyricsData.lyrics}
+            </pre>
         </div>
-      )}
+        )}
 
-      {/* youtube result (display the top result only) */}
+    {/* youtube result (display the top result only) */}
     <div className="mt-8">
     <h2>Instrumental</h2>
     {ytError && <p className="text-red-600">{ytError}</p>}
@@ -186,7 +225,7 @@ export default function SongSearch() {
 
         return (
         <div
-            className="border border-gray-200 rounded-lg p-2 max-w-lg"
+            className="flex flex-col border border-gray-200 rounded-lg text-center item-center p-2 max-w-lg"
         >
             {thumb && watchUrl && (
             <a href={watchUrl} target="_blank" rel="noreferrer">
@@ -213,11 +252,21 @@ export default function SongSearch() {
                 )}
             </div>
             </div>
+        <div className="flex flex-col mt-8 gap-4"> 
+            <label>Parody Topic</label>
+            <input 
+                className="flex border"
+                placeholder="Enter a parody topic"
+                value = {parodyTopic}
+                onChange={(e) => setParodyTopic(e.target.value)}
+            ></input>
+            <button onClick={generateParodyLyrics} className="border">Generate Song Lyrics</button>
+            <div>{generatedParody}</div>
+        </div>
         </div>
         );
     })()}
     </div>
-
     </div>
   );
 }

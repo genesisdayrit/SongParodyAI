@@ -48,7 +48,8 @@ export default function SongSearch() {
   const [loading, setLoading] = useState(false);
   const [ytLoading, setYtLoading] = useState(false);
   const [parodyTopic, setParodyTopic ] = useState<string | undefined>('')
-  const [lyricsData, setLyricsData] = useState<LyricsResponse | null>(null);
+  const [lyricsData, setLyricsData] = useState<LyricsResponse | null>(null)
+  const [generatedParody, setGeneratedParody] = useState<string | undefined>('')
 
   async function fetchLyrics(qSong: string, qArtist: string) {
     setLyricsError(null);
@@ -101,6 +102,7 @@ export default function SongSearch() {
     }
   }
   
+
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const qSong = song.trim();
@@ -119,6 +121,25 @@ export default function SongSearch() {
     }
   }
 
+
+//   const sendMove = async (gameId: String, cellIndex: Number) => {
+//     console.log('cell clicked')
+//     console.log(`Game ${gameId} Updated`)
+//     let response = await fetch(`/api/game/${id}/move`, {
+//       method: "POST",
+//       headers: {"Content-Type": "application/json"},
+//       body: JSON.stringify({cellPosition: cellIndex, id: gameId, gameState: gameState})
+//     })
+  
+//     let result = await response.json()
+  
+//     if (result.ok) {
+//       console.log("Data sent sucessfully!", gameState)
+//       fetchGameState()
+//       fetchGameMoves()
+//       }
+//     }
+
   // async function that passes the returned lyrics from genius into the AI
   // post request to the api from the api
    
@@ -133,24 +154,34 @@ export default function SongSearch() {
       return;
     }
   
-    console.log('clicked');
-    // this logs the raw lyrics text, not the object
-    console.log(song, artist, lyricsData.lyrics, parodyTopic);
+    console.log('Generating parody lyrics...')
+    console.log('Data:', { song, artist, lyricsLength: lyricsData.lyrics.length, parodyTopic })
   
-    const response = await fetch('/api/ai-parody-generation', {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        // prefer the official title from Genius if you want
-        songTitle: lyricsData.title || song,
-        artist,
-        lyrics: lyricsData.lyrics,
-        parodyTopic
+    try {
+      const response = await fetch('/api/ai-parody-generation', {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // prefer the official title from Genius if you want
+          songTitle: lyricsData.title || song,
+          artist: artist,
+          lyrics: lyricsData.lyrics,
+          parodyTopic: parodyTopic
+        })
       })
-    });
   
-    const result = await response.json();
-    console.log(result);
+      const result = await response.json()
+      console.log('Response from server:', result)
+      
+      if (result.ok) {
+          console.log('Parody generated successfully, length:', result.generatedParody?.length);
+          setGeneratedParody(result.generatedParody)
+      } else {
+          console.error('Server returned error:', result.error)
+      }
+    } catch (error) {
+      console.error('Fetch error:', error)
+    }
   };
 
   return (
@@ -252,6 +283,7 @@ export default function SongSearch() {
                 onChange={(e) => setParodyTopic(e.target.value)}
             ></input>
             <button onClick={generateParodyLyrics} className="border">Generate Song Lyrics</button>
+            <div>{generatedParody}</div>
         </div>
         </div>
         );

@@ -6,6 +6,7 @@ import 'dotenv/config';
 import OpenAI from 'openai';
 
 const app = express();
+app.use(express.json());
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -115,7 +116,12 @@ app.get("/yt-search", async (req, res) => {
 app.post('/api/ai-parody-generation', async (req, res) => {
   const { songTitle, artist, lyrics, parodyTopic } = req.body; 
 
-  console.log(req.body)
+  console.log('Request received:', { songTitle, artist, lyricsLength: lyrics?.length, parodyTopic })
+  
+  if (!lyrics || !parodyTopic) {
+      return res.status(400).json({error: 'Lyrics or Parody Topic not available'})
+  } 
+  
   const systemPrompt = `
   You are a hilarious parody song writer. I want to make a parody of the song: ${songTitle} by ${artist}
   
@@ -127,25 +133,22 @@ app.post('/api/ai-parody-generation', async (req, res) => {
   try your best to match the syllable cadence and rhytmic structure for the lyrics. 
   `
 
-  if (!lyrics || !parodyTopic) {
-      return res.status(400).json({error: 'Lyrics or Parody Topic not available'})
-  } 
   try {
-      console.log(`Attempting AI Response for ${systemPrompt}`)
+      console.log('Calling OpenAI API...')
       const completion = await openai.chat.completions.create({
           model: 'gpt-4o',
           messages: [{ role: 'user', content: systemPrompt }],
           max_tokens: 1000
       })
 
-      console.log(completion)
-
       const generatedParodyResponse = completion.choices[0].message.content;
+      console.log('AI Response received, length:', generatedParodyResponse?.length)
 
       res.status(200).json({ok: true, generatedParody: generatedParodyResponse})
 
   } catch (error) {
-      res.status(500).json({ error: 'Failed to get OpenAI response'})
+      console.error('OpenAI Error:', error)
+      res.status(500).json({ error: 'Failed to get OpenAI response', details: error instanceof Error ? error.message : 'Unknown error' })
   }
 })
 

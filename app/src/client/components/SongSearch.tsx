@@ -216,25 +216,24 @@ export default function SongSearch() {
 
     {ytItems[0] && (() => {
         const item = ytItems[0];
-        const thumb =
-        item.snippet.thumbnails.medium?.url ||
-        item.snippet.thumbnails.high?.url ||
-        item.snippet.thumbnails.default?.url;
         const videoId = item.id.videoId;
         const watchUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : undefined;
+        const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : undefined;
 
         return (
         <div
             className="flex flex-col border border-gray-200 rounded-lg text-center item-center p-2 max-w-lg"
         >
-            {thumb && watchUrl && (
-            <a href={watchUrl} target="_blank" rel="noreferrer">
-                <img
-                src={thumb}
-                alt={item.snippet.title}
+            {embedUrl && (
+            <iframe
+                width="100%"
+                height="315"
+                src={embedUrl}
+                title={item.snippet.title}
+                frameBorder="0"
+                allowFullScreen
                 className="w-full rounded-md"
-                />
-            </a>
+            />
             )}
             <div className="mt-2">
             {watchUrl ? (

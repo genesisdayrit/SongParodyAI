@@ -222,7 +222,7 @@ export default function SongSearch() {
 
         return (
         <div
-            className="flex flex-col border border-gray-200 rounded-lg text-center item-center p-2 max-w-lg"
+            className="flex flex-col border border-gray-200 rounded-lg text-center item-center p-2 max-w-lg mx-auto"
         >
             {embedUrl && (
             <iframe

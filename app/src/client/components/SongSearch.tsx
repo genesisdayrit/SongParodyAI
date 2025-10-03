@@ -50,6 +50,7 @@ export default function SongSearch() {
   const [parodyTopic, setParodyTopic ] = useState<string | undefined>('')
   const [lyricsData, setLyricsData] = useState<LyricsResponse | null>(null)
   const [generatedParody, setGeneratedParody] = useState<string | undefined>('')
+  const [parodyLoading, setParodyLoading] = useState(false)
 
   async function fetchLyrics(qSong: string, qArtist: string) {
     setLyricsError(null);
@@ -81,7 +82,7 @@ export default function SongSearch() {
     const params = new URLSearchParams({
       q,
       type: "video",
-      maxResults: "1", // only return top result
+      maxResults: "1",
       order: "relevance",
       safeSearch: "moderate",
     });
@@ -136,11 +137,13 @@ export default function SongSearch() {
     console.log('Data:', { song, artist, lyricsLength: lyricsData.lyrics.length, parodyTopic })
   
     try {
-      const response = await fetch('/api/ai-parody-generation', {
+        setParodyLoading(true)
+        const response = await fetch('/api/ai-parody-generation', {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // prefer the official title from Genius
+          
+            // prefer the official title from Genius
           songTitle: lyricsData.title || song,
           artist: artist,
           lyrics: lyricsData.lyrics,
@@ -154,6 +157,7 @@ export default function SongSearch() {
       if (result.ok) {
           console.log('Parody generated successfully, length:', result.generatedParody?.length);
           setGeneratedParody(result.generatedParody)
+          setParodyLoading(false)
       } else {
           console.error('Server returned error:', result.error)
       }
@@ -274,7 +278,7 @@ export default function SongSearch() {
               onClick={generateParodyLyrics} 
               className="w-full px-4 py-2 bg-black text-white rounded"
             >
-              Generate Song Lyrics
+              {parodyLoading ? 'Loading...' : 'Generate Song Lyrics'}
             </button>
           </div>
             

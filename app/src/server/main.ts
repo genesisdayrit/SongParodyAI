@@ -44,21 +44,7 @@ app.get("/genius-lyrics", async (req, res) => {
     const songUrl = hits[0].result.url;
 
     // scrape lyrics from Genius page
-    const page = await axios.get(songUrl, {
-      // change headers to bypass bot detectors
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Cache-Control': 'max-age=0'
-      }
-    });
+    const page = await axios.get(songUrl);
     const $ = cheerio.load(page.data);
 
     let lyrics = "";
@@ -73,12 +59,8 @@ app.get("/genius-lyrics", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Genius API Error:", err);
-    const errorMessage = err instanceof Error ? err.message : "Something went wrong.";
-    return res.status(500).json({ 
-      error: "Failed to fetch lyrics", 
-      details: errorMessage 
-    });
+    console.error(err);
+    return res.status(500).json({ error: "Something went wrong." });
   }
 });
 

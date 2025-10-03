@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "nodemon -w src/server -x tsx src/server/main.ts",
     "start": "NODE_ENV=production tsx src/server/main.ts",
-    "build": "vite build"
+    "build": "vite build",
+    "preview": "vite preview"
   },
+  "packageManager": "bun@^1",
   "dependencies": {
     "axios": "^1.12.2",
     "cheerio": "^1.1.2",

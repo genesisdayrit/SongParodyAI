@@ -12,7 +12,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-
 const GENIUS_API_TOKEN = process.env.GENIUS_CLIENT_ACCESS_TOKEN
 
 const YT_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
@@ -152,7 +151,11 @@ app.post('/api/ai-parody-generation', async (req, res) => {
   }
 })
 
-// --- Start Vite + Express ---
-ViteExpress.listen(app, 3000, () =>
-  console.log("Server is listening on port 3000...")
-);
+// Only run ViteExpress in local development
+if (process.env.NODE_ENV !== 'production') {
+  ViteExpress.listen(app, 3000, () => {
+    console.log("Server is listening on http://localhost:3000...");
+  });
+}
+
+export default app;

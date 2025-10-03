@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/genius-lyrics", "destination": "/api" },
+    { "source": "/yt-search", "destination": "/api" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

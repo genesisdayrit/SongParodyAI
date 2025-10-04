@@ -143,7 +143,7 @@ export default function SongSearch() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           
-            // prefer the official title from genius
+            // prefer the official title from Genius
           songTitle: lyricsData.title || song,
           artist: artist,
           lyrics: lyricsData.lyrics,

@@ -173,10 +173,9 @@ app.post('/api/suno/generate', async (req, res) => {
       customMode: customMode || false 
     });
 
-    // build request body - customMode must be explicitly set (cannot be null)
     const requestBody: any = {
       prompt,
-      customMode: customMode || false,  // must be explicitly false, not null/undefined
+      customMode: customMode || false,
       instrumental: instrumental || false,
       model: model || 'V4_5',
       // always include callback url (required by suno api even though we don't use it)
@@ -219,7 +218,7 @@ app.post('/api/suno/generate', async (req, res) => {
   }
 });
 
-// check status of a suno task (not currently used by frontend)
+// check status of a suno task (testing - not currently used by frontend)
 app.get('/api/suno/status/:taskId', async (req, res) => {
   try {
     if (!SUNO_API_KEY) {

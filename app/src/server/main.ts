@@ -146,7 +146,7 @@ app.post('/api/ai-parody-generation', async (req, res) => {
   
   The lyrics for the song are within this text: "${lyrics}"
 
-  I want to create a parody for the topic on ${parodyTopic}
+  I want to create a parody for the song lyrics above on topic: ${parodyTopic}
 
   Please rewrite the lyrics based on the parody topic, 
   try your best to match the syllable cadence and rhytmic structure for the lyrics. 

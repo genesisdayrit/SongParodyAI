@@ -54,7 +54,10 @@ app.get("/genius-lyrics", async (req, res) => {
 
     let lyrics = "";
     $("[data-lyrics-container=true]").each((i, elem) => {
-      lyrics += $(elem).text() + "\n";
+      // replace <br> tags with newlines before extracting text
+      $(elem).find('br').replaceWith('\n');
+      const text = $(elem).text();
+      lyrics += text + "\n";
     });
 
     // find the first '[' and start from there (lyrics structure markers)
@@ -62,6 +65,12 @@ app.get("/genius-lyrics", async (req, res) => {
     if (firstBracket !== -1) {
       lyrics = lyrics.substring(firstBracket);
     }
+
+    // improve readability: add line breaks before section markers
+    lyrics = lyrics.replace(/\[([^\]]+)\]/g, '\n[$1]\n');
+    
+    // clean up excessive newlines (more than 2 in a row)
+    lyrics = lyrics.replace(/\n{3,}/g, '\n\n');
 
     return res.json({
       title: hits[0].result.full_title,

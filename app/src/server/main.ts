@@ -17,6 +17,11 @@ const GENIUS_API_TOKEN = process.env.GENIUS_CLIENT_ACCESS_TOKEN
 const YT_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
+const SUNO_API_BASE = "https://api.sunoapi.org";
+const SUNO_API_KEY = process.env.SUNO_API_KEY;
+
+const BASE_URL = process.env.BASE_URL;
+
 app.get("/hello", (_, res) => {
   res.send("Hello Vite + React + TypeScript!");
 });
@@ -130,6 +135,8 @@ app.post('/api/ai-parody-generation', async (req, res) => {
 
   Please rewrite the lyrics based on the parody topic, 
   try your best to match the syllable cadence and rhytmic structure for the lyrics. 
+  
+  ONLY INCLUDE THE CREATED SONG LYRICS. DO NOT ADD ADDITIONAL COMMENTARY.
   `
 
   try {
@@ -151,7 +158,118 @@ app.post('/api/ai-parody-generation', async (req, res) => {
   }
 })
 
-// Only run ViteExpress in local development
+// generate music with suno api
+app.post('/api/suno/generate', async (req, res) => {
+  try {
+    if (!SUNO_API_KEY) {
+      return res.status(500).json({ error: 'SUNO_API_KEY not configured' });
+    }
+
+    const { prompt, customMode, instrumental, model, style, title } = req.body;
+
+    console.log('generating music with suno api:', { 
+      hasPrompt: !!prompt, 
+      model: model || 'V4_5', 
+      customMode: customMode || false 
+    });
+
+    const requestBody: any = {
+      prompt,
+      customMode: customMode || false,
+      instrumental: instrumental || false,
+      model: model || 'V4_5',
+      // always include callback url (required by suno api even though we don't use it)
+      callBackUrl: `${BASE_URL || 'http://localhost:3000'}/api/suno/webhook`
+    };
+
+    // add optional fields only if provided
+    if (style) requestBody.style = style;
+    if (title) requestBody.title = title;
+
+    const response = await fetch(`${SUNO_API_BASE}/api/v1/generate`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SUNO_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+    
+    if (data.code !== 200) {
+      console.error('suno api error:', data);
+      return res.status(400).json({ error: 'failed to generate music', details: data });
+    }
+
+    console.log('task created:', data.data.taskId);
+    return res.json({
+      success: true,
+      taskId: data.data.taskId,
+      message: 'music generation started'
+    });
+
+  } catch (error) {
+    console.error('suno api error:', error);
+    return res.status(500).json({ 
+      error: 'failed to generate music', 
+      details: error instanceof Error ? error.message : 'unknown error' 
+    });
+  }
+});
+
+// check status of a suno task (testing - not currently used by frontend)
+app.get('/api/suno/status/:taskId', async (req, res) => {
+  try {
+    if (!SUNO_API_KEY) {
+      return res.status(500).json({ error: 'SUNO_API_KEY not configured' });
+    }
+
+    const { taskId } = req.params;
+
+    console.log('checking status for task:', taskId);
+
+    const response = await fetch(`${SUNO_API_BASE}/api/v1/generate/record-info?taskId=${taskId}`, {
+      headers: {
+        'Authorization': `Bearer ${SUNO_API_KEY}`
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.code !== 200) {
+      return res.status(400).json({ error: 'failed to get task status', details: result });
+    }
+
+    const status = result.data.status;
+    console.log(`task ${taskId} status:`, status);
+
+    return res.json({
+      taskId: result.data.taskId,
+      status: status,
+      ...(status === 'SUCCESS' && result.data.response && {
+        tracks: result.data.response.data.map((track: any) => ({
+          id: track.id,
+          title: track.title,
+          audioUrl: track.audio_url,
+          duration: track.duration,
+          tags: track.tags
+        }))
+      }),
+      ...(status === 'FAILED' && {
+        error: result.data.errorMessage
+      })
+    });
+
+  } catch (error) {
+    console.error('suno api error:', error);
+    return res.status(500).json({ 
+      error: 'failed to check task status', 
+      details: error instanceof Error ? error.message : 'unknown error' 
+    });
+  }
+});
+
 if (process.env.NODE_ENV !== 'production') {
   ViteExpress.listen(app, 3000, () => {
     console.log("Server is listening on http://localhost:3000...");

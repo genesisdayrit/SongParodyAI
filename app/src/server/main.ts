@@ -57,6 +57,12 @@ app.get("/genius-lyrics", async (req, res) => {
       lyrics += $(elem).text() + "\n";
     });
 
+    // find the first '[' and start from there (lyrics structure markers)
+    const firstBracket = lyrics.indexOf('[');
+    if (firstBracket !== -1) {
+      lyrics = lyrics.substring(firstBracket);
+    }
+
     return res.json({
       title: hits[0].result.full_title,
       url: songUrl,

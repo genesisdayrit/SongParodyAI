@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type LyricsResponse = {
   title: string;
@@ -53,9 +53,22 @@ export default function SongSearch() {
   const [parodyLoading, setParodyLoading] = useState(false)
   
   // suno ai music generation state
-  const [musicGenerationStatus, setMusicGenerationStatus] = useState<'idle' | 'sending' | 'success' | 'failed'>('idle');
+  const [musicGenerationStatus, setMusicGenerationStatus] = useState<'idle' | 'sending' | 'polling' | 'complete' | 'failed'>('idle');
   const [musicStyle, setMusicStyle] = useState('Pop');
   const [vocalGender, setVocalGender] = useState<'any' | 'male' | 'female'>('any');
+  const [songTitle, setSongTitle] = useState('');
+  const [finalAudioUrl, setFinalAudioUrl] = useState<string | null>(null);
+
+  // Auto-set song title when lyrics and artist are available
+  useEffect(() => {
+    if (lyricsData && artist) {
+      const defaultTitle = `parody in the style of ${artist}'s ${lyricsData.title}`;
+      setSongTitle(defaultTitle);
+    } else if (lyricsData && song) {
+      const defaultTitle = `parody in the style of ${lyricsData.title}`;
+      setSongTitle(defaultTitle);
+    }
+  }, [lyricsData, artist, song]);
 
   async function fetchLyrics(qSong: string, qArtist: string) {
     setLyricsError(null);
@@ -143,7 +156,7 @@ export default function SongSearch() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           
-            // prefer the official title from Genius
+            // prefer the official title from genius
           songTitle: lyricsData.title || song,
           artist: artist,
           lyrics: lyricsData.lyrics,
@@ -166,7 +179,32 @@ export default function SongSearch() {
     }
   };
 
-  // send request to suno to generate song
+  // poll suno status endpoint until complete
+  async function pollForCompletion(taskId: string): Promise<string> {
+    const maxAttempts = 60; // 10 minutes max
+    
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise(resolve => setTimeout(resolve, 10000)); // wait 10s
+      
+      const response = await fetch(`/api/suno/status/${taskId}`);
+      const data = await response.json();
+      
+      console.log(`poll attempt ${i + 1}: status = ${data.status}`);
+      
+      // check for final success status
+      if (data.status === 'SUCCESS' && data.tracks && data.tracks.length > 0) {
+        console.log('found audio url:', data.tracks[0].audioUrl);
+        return data.tracks[0].audioUrl;
+      } else if (data.status === 'FAILED') {
+        throw new Error(data.error || 'generation failed');
+      }
+      // otherwise keep polling
+    }
+    
+    throw new Error('generation timeout - exceeded 10 minutes');
+  }
+
+  // send request to suno and poll for completion
   async function generateParodySong() {
     if (!generatedParody) {
       console.error('no parody lyrics available');
@@ -175,6 +213,7 @@ export default function SongSearch() {
 
     try {
       setMusicGenerationStatus('sending');
+      setFinalAudioUrl(null); // clear previous audio
 
       // add vocal gender preference to style if specified
       let styleWithVocals = musicStyle;
@@ -191,7 +230,7 @@ export default function SongSearch() {
           prompt: generatedParody,
           customMode: true,
           style: styleWithVocals,
-          title: `${song} Parody - ${parodyTopic}`,
+          title: songTitle,
           instrumental: false,
           model: 'V4_5'
         })
@@ -203,8 +242,18 @@ export default function SongSearch() {
         throw new Error('failed to start generation');
       }
 
-      console.log('suno task created:', result.taskId);
-      setMusicGenerationStatus('success');
+      const taskId = result.taskId;
+      console.log('suno task started:', taskId);
+
+      // request sent successfully, now start polling
+      setMusicGenerationStatus('polling');
+
+      // poll for completion
+      const audioUrl = await pollForCompletion(taskId);
+      
+      setFinalAudioUrl(audioUrl);
+      setMusicGenerationStatus('complete');
+      console.log('song generation complete:', audioUrl);
 
     } catch (error) {
       console.error('music generation error:', error);
@@ -349,14 +398,26 @@ export default function SongSearch() {
             </div>
           )}
 
-          {/* ai song generation section */}
+          {/* ai vocals generation section */}
           {generatedParody && (
             <div className="mt-6 border-t pt-6">
               <h3 className="text-lg font-semibold mb-4 text-center">
-                Generate AI Song
+                Generate AI Vocals
               </h3>
               
               <div className="max-w-md mx-auto">
+                {/* song title input */}
+                <div className="mb-4">
+                  <label className="block mb-2 font-medium">Song Title</label>
+                  <input 
+                    className="w-full px-3 py-2 border rounded"
+                    value={songTitle}
+                    onChange={(e) => setSongTitle(e.target.value)}
+                    placeholder="Enter song title"
+                    disabled={musicGenerationStatus === 'sending' || musicGenerationStatus === 'polling'}
+                  />
+                </div>
+
                 {/* music style selector */}
                 <div className="mb-4">
                   <label className="block mb-2 font-medium">Music Style</label>
@@ -364,7 +425,7 @@ export default function SongSearch() {
                     className="w-full px-3 py-2 border rounded"
                     value={musicStyle}
                     onChange={(e) => setMusicStyle(e.target.value)}
-                    disabled={musicGenerationStatus === 'sending'}
+                    disabled={musicGenerationStatus === 'sending' || musicGenerationStatus === 'polling'}
                   >
                     <option value="Pop">Pop</option>
                     <option value="Rock">Rock</option>
@@ -386,7 +447,7 @@ export default function SongSearch() {
                     className="w-full px-3 py-2 border rounded"
                     value={vocalGender}
                     onChange={(e) => setVocalGender(e.target.value as 'any' | 'male' | 'female')}
-                    disabled={musicGenerationStatus === 'sending'}
+                    disabled={musicGenerationStatus === 'sending' || musicGenerationStatus === 'polling'}
                   >
                     <option value="any">Any</option>
                     <option value="male">Male Vocals</option>
@@ -397,27 +458,58 @@ export default function SongSearch() {
                 {/* generate button */}
                 <button
                   onClick={generateParodySong}
-                  disabled={musicGenerationStatus === 'sending'}
+                  disabled={musicGenerationStatus === 'sending' || musicGenerationStatus === 'polling'}
                   className="w-full px-4 py-2 bg-black text-white rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {musicGenerationStatus === 'sending' && 'Sending request...'}
-                  {musicGenerationStatus === 'idle' && 'Generate Song with Suno AI'}
-                  {musicGenerationStatus === 'success' && 'Send Another Request'}
+                  {musicGenerationStatus === 'polling' && 'Generating (2-5 minutes)...'}
+                  {musicGenerationStatus === 'idle' && 'Generate Song with AI Vocals'}
+                  {musicGenerationStatus === 'complete' && 'Generate Another Song'}
                   {musicGenerationStatus === 'failed' && 'Try Again'}
                 </button>
 
-                {musicGenerationStatus === 'success' && (
-                  <p className="mt-2 text-black text-sm text-center">
-                    Request sent successfully! Check your Suno dashboard.
+                {/* status messages */}
+                {musicGenerationStatus === 'sending' && (
+                  <p className="mt-2 text-gray-600 text-sm text-center">
+                    sending request to suno...
+                  </p>
+                )}
+
+                {musicGenerationStatus === 'polling' && (
+                  <p className="mt-2 text-green-600 text-sm text-center">
+                    request sent successfully! polling for completion...
                   </p>
                 )}
 
                 {musicGenerationStatus === 'failed' && (
                   <p className="mt-2 text-red-600 text-sm text-center">
-                    Request failed. Please try again.
+                    generation failed. please try again.
                   </p>
                 )}
               </div>
+
+              {/* audio player when complete */}
+              {finalAudioUrl && musicGenerationStatus === 'complete' && (
+                <div className="mt-6 max-w-md mx-auto border border-purple-300 rounded-lg p-4 bg-purple-50">
+                  <h4 className="font-semibold mb-3 text-center text-purple-900">
+                    Your Parody Song
+                  </h4>
+                  <audio 
+                    controls 
+                    src={finalAudioUrl}
+                    className="w-full mb-3"
+                  >
+                    Your browser does not support the audio element.
+                  </audio>
+                  <a 
+                    href={finalAudioUrl}
+                    download={`${song}-parody.mp3`}
+                    className="block text-center text-purple-600 hover:text-purple-800 hover:underline text-sm font-medium"
+                  >
+                    Download MP3
+                  </a>
+                </div>
+              )}
             </div>
           )}
         </div>
